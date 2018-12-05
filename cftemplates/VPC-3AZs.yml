@@ -1,0 +1,623 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'Cloudformation Template to create a VPC with public and private subnets in 3 AZs'
+
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: 'VPC Parameters'
+      Parameters:
+      - ClassB
+    ParameterLabels:
+      ClassB:
+        default: ClassB 2nd Octet
+        
+Parameters:
+  ClassB:
+    Description: 'Specify the 2nd Octet of the Class B IPv4 CIDR for the VPC (10.XXX.0.0/16)'
+    Type: Number
+    Default: 0
+    ConstraintDescription: 'Must be in the range [0-255]'
+    MinValue: 0
+    MaxValue: 255
+
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Sub '10.${ClassB}.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: !Sub '10.${ClassB}.0.0/16'
+        
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Sub '10.${ClassB}.0.0/16'
+        
+  VPCGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+ 
+  NATEIPA:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc  
+      
+  NATEIPB:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc  
+ 
+  NATEIPC:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc  
+      
+  SubnetAPublic:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Sub '10.${ClassB}.0.0/20'
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [0, !GetAZs '']
+                   - 'Public'
+      - Key: Reach
+        Value: public
+        
+  SubnetAPrivate:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Sub '10.${ClassB}.16.0/20'
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [0, !GetAZs '']
+                   - 'Private'
+      - Key: Reach
+        Value: private
+        
+  SubnetBPublic:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Sub '10.${ClassB}.32.0/20'
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [1, !GetAZs '']
+                   - 'Public'        
+      - Key: Reach
+        Value: public
+        
+  SubnetBPrivate:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Sub '10.${ClassB}.48.0/20'
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [1, !GetAZs '']
+                   - 'Private'
+      - Key: Reach
+        Value: private
+        
+  SubnetCPublic:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock: !Sub '10.${ClassB}.64.0/20'
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [2, !GetAZs '']
+                   - 'Public'
+      - Key: Reach
+        Value: public
+        
+  SubnetCPrivate:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock: !Sub '10.${ClassB}.80.0/20'
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [2, !GetAZs '']
+                   - 'Private'
+      - Key: Reach
+        Value: private
+        
+  RouteTablePublic:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - 'Public'
+
+  RouteTableAPrivate:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [0, !GetAZs '']
+                   - 'Private'
+        
+  RouteTableBPrivate:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [1, !GetAZs '']
+                   - 'Private'
+
+  RouteTableCPrivate:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [2, !GetAZs '']
+                   - 'Private'
+              
+  RouteTableAssociationAPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPublic
+      RouteTableId: !Ref RouteTablePublic
+      
+  RouteTableAssociationAPrivate:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPrivate
+      RouteTableId: !Ref RouteTableAPrivate
+      
+  RouteTableAssociationBPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetBPublic
+      RouteTableId: !Ref RouteTablePublic
+      
+  RouteTableAssociationBPrivate:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetBPrivate
+      RouteTableId: !Ref RouteTableBPrivate
+      
+  RouteTableAssociationCPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetCPublic
+      RouteTableId: !Ref RouteTablePublic
+      
+  RouteTableAssociationCPrivate:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetCPrivate
+      RouteTableId: !Ref RouteTableCPrivate
+      
+  RouteTablePublicInternetRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  NetworkAclPublic:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - 'NACL'
+                   - 'Public'
+
+  NetworkAclPrivate:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - 'NACL'
+                   - 'Private'
+
+  SubnetNetworkAclAssociationAPublic:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPublic
+      NetworkAclId: !Ref NetworkAclPublic
+      
+  SubnetNetworkAclAssociationAPrivate:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPrivate
+      NetworkAclId: !Ref NetworkAclPrivate
+      
+  SubnetNetworkAclAssociationBPublic:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetBPublic
+      NetworkAclId: !Ref NetworkAclPublic
+      
+  SubnetNetworkAclAssociationBPrivate:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetBPrivate
+      NetworkAclId: !Ref NetworkAclPrivate
+      
+  SubnetNetworkAclAssociationCPublic:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetCPublic
+      NetworkAclId: !Ref NetworkAclPublic
+      
+  SubnetNetworkAclAssociationCPrivate:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetCPrivate
+      NetworkAclId: !Ref NetworkAclPrivate
+      
+  NetworkAclEntryInPublicAllowAll:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPublic
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+      
+  NetworkAclEntryOutPublicAllowAll:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPublic
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: '0.0.0.0/0'
+      
+  NetworkAclEntryInPrivateAllowVPC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPrivate
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+      
+  NetworkAclEntryOutPrivateAllowVPC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPrivate
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: '0.0.0.0/0'
+
+  NATGatewayA:
+    DependsOn: VPC
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt [NATEIPA,AllocationId]      
+      SubnetId: !Ref SubnetAPublic
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [0, !GetAZs '']
+                   - 'NGW'
+
+  NATGatewayB:
+    DependsOn: VPC
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt [NATEIPB,AllocationId]      
+      SubnetId: !Ref SubnetBPublic
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [1, !GetAZs '']
+                   - 'NGW'
+      
+  NATGatewayC:
+    DependsOn: VPC
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt [NATEIPC,AllocationId]      
+      SubnetId: !Ref SubnetCPublic
+      Tags:
+      - Key: Name
+        Value: !Join
+                 - '_'
+                 - - !Sub '10.${ClassB}.0.0/16'
+                   - !Select [2, !GetAZs '']
+                   - 'NGW'
+      
+  RouteTablePrivateANATRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTableAPrivate
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayA
+
+  RouteTablePrivateBNATRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTableBPrivate
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayB
+
+  RouteTablePrivateCNATRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTableCPrivate
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayC
+
+  S3VPCEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: '*'
+            Effect: Allow
+            Resource: '*'
+            Principal: '*'
+      RouteTableIds:
+        - !Ref RouteTableAPrivate
+        - !Ref RouteTableBPrivate
+        - !Ref RouteTableCPrivate
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !Ref VPC
+
+  SecretRotationLambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription:  !Join [ " - ", [ "Security group for Secret Rotation Lambda ENIs", !Ref 'AWS::StackName' ] ] 
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-SecretRotationLambdaSecurityGroup'
+
+  SecretRotationLambdaSecurityGroupIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !GetAtt 'SecretRotationLambdaSecurityGroup.GroupId'
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref SecretRotationLambdaSecurityGroup
+      Description: 'Self Reference'
+        
+  SecretsManagerVPCEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcEndpointType: 'Interface'
+      PrivateDnsEnabled: true
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref SubnetAPrivate
+        - !Ref SubnetBPrivate
+        - !Ref SubnetCPrivate 
+      SecurityGroupIds:
+        - !Ref SecretRotationLambdaSecurityGroup
+      ServiceName: !Join 
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .secretsmanager
+     
+Outputs:
+  TemplateID:
+    Description: 'Template ID'
+    Value: 'VPC-3AZs'
+    
+  StackName:
+    Description: 'Stack name'
+    Value: !Sub '${AWS::StackName}'
+
+  VPC:
+    Description: 'VPC'
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPC'
+      
+  ClassB:
+    Description: 'Class B'
+    Value: !Ref ClassB
+    Export:
+      Name: !Sub '${AWS::StackName}-ClassB'
+      
+  CidrBlock:
+    Description: 'The set of IP addresses for the VPC'
+    Value: !GetAtt 'VPC.CidrBlock'
+    Export:
+      Name: !Sub '${AWS::StackName}-CidrBlock'
+    
+  AZs:
+    Description: 'AZs'
+    Value: 3
+    Export:
+      Name: !Sub '${AWS::StackName}-AZs'
+      
+  AZA:
+    Description: 'AZ of A'
+    Value: !Select [0, !GetAZs '']
+    Export:
+      Name: !Sub '${AWS::StackName}-AZA'
+      
+  AZB:
+    Description: 'AZ of B'
+    Value: !Select [1, !GetAZs '']
+    Export:
+      Name: !Sub '${AWS::StackName}-AZB'
+      
+  AZC:
+    Description: 'AZ of C'
+    Value: !Select [2, !GetAZs '']
+    Export:
+      Name: !Sub '${AWS::StackName}-AZC'
+
+  SubnetsPublic:
+    Description: 'Subnets public'
+    Value: !Join [',', [!Ref SubnetAPublic, !Ref SubnetBPublic, !Ref SubnetCPublic]]
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetsPublic'
+      
+  SubnetsPrivate:
+    Description: 'Subnets private'
+    Value: !Join [',', [!Ref SubnetAPrivate, !Ref SubnetBPrivate, !Ref SubnetCPrivate]]
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetsPrivate'
+      
+  RouteTablesPublic:
+    Description: 'Route tables public'
+    Value: !Ref RouteTablePublic
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTablePublic'
+      
+  RouteTablesPrivate:
+    Description: 'Route tables private'
+    Value: !Join [',', [!Ref RouteTableAPrivate, !Ref RouteTableBPrivate, !Ref RouteTableCPrivate]]
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTablesPrivate'
+
+  SubnetAPublic:
+    Description: 'Subnet A public'
+    Value: !Ref SubnetAPublic
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetAPublic'
+      
+  SubnetAPrivate:
+    Description: 'Subnet A private'
+    Value: !Ref SubnetAPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetAPrivate'
+      
+  RouteTableAPrivate:
+    Description: 'Route table A private'
+    Value: !Ref RouteTableAPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableAPrivate'
+      
+  SubnetBPublic:
+    Description: 'Subnet B public'
+    Value: !Ref SubnetBPublic
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetBPublic'
+
+  SubnetBPrivate:
+    Description: 'Subnet B private'
+    Value: !Ref SubnetBPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetBPrivate'
+      
+  RouteTableBPrivate:
+    Description: 'Route table B private'
+    Value: !Ref RouteTableBPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableBPrivate'
+      
+  SubnetCPublic:
+    Description: 'Subnet C public'
+    Value: !Ref SubnetCPublic
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetCPublic'
+
+  SubnetCPrivate:
+    Description: 'Subnet C private'
+    Value: !Ref SubnetCPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetCPrivate'
+      
+  RouteTableCPrivate:
+    Description: 'Route table C private'
+    Value: !Ref RouteTableCPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableCPrivate'
+
+  S3VPCEndpoint:
+    Description: S3 VPC Endpoint
+    Value: !Ref S3VPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-S3VPCEndpoint'
+      
+  SecretsManagerVPCEndpoint:
+    Description: Secrets Manager VPC Endpoint
+    Value: !Ref SecretsManagerVPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-SecretsManagerVPCEndpoint'
+  
+  SecretRotationLambdaSecurityGroup:
+    Description: Secret Rotation Lambda SecurityGroup for AWS Secrets Manager
+    Value: !Ref SecretRotationLambdaSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecretRotationLambdaSecurityGroup'  
+  

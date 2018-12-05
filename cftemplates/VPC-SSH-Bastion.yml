@@ -1,0 +1,538 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >-
+  Cloudformation template to create a highly available SSH bastion host
+  
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - ParentVPCStack
+          - RemoteAccessCIDR
+      - Label:
+          default: Amazon EC2 Configuration
+        Parameters:
+          - KeyPairName
+          - BastionInstanceType
+          - LogsRetentionInDays
+          - NotificationList
+      - Label:
+          default: Linux Bastion Configuration
+        Parameters:
+          - BastionTenancy
+          - EnableBanner
+          - BastionBanner
+          - EnableTCPForwarding
+          - EnableX11Forwarding
+
+    ParameterLabels:
+      BastionTenancy:
+        default: Bastion Tenancy
+      BastionBanner:
+        default: Bastion Banner
+      BastionInstanceType:
+        default: Bastion Instance Type
+      EnableBanner:
+        default: Enable Banner
+      EnableTCPForwarding:
+        default: Enable TCP Forwarding
+      EnableX11Forwarding:
+        default: Enable X11 Forwarding
+      KeyPairName:
+        default: Key Pair Name
+      RemoteAccessCIDR:
+        default: Allowed Bastion External Access CIDR
+      AltInitScript:
+        default: Custom Bootstrap Script
+      OSImageOverride:
+        default: AMI override
+      NotificationList:
+        default: SNS Notification Email
+
+        
+Parameters:
+
+  ParentVPCStack:
+    Description: 'Stack name of parent VPC stack based on VPC-3AZs yaml template. Refer Cloudformation dashboard in AWS Console to get this.'
+    Type: String
+
+  NotificationList:
+    Type: String
+    Description: The Email notification list is used to configure a SNS topic for sending cloudwatch alarm notifications
+    AllowedPattern: '^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
+    ConstraintDescription: provide a valid email address.  
+    
+  LogsRetentionInDays:
+    Description: Specify the number of days you want to retain log events
+    Type: Number
+    Default: 14
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]    
+    
+  BastionBanner:
+    Default: >-
+      https://aws-quickstart.s3.amazonaws.com/quickstart-linux-bastion/scripts/banner_message.txt
+    Description: Banner text to display upon login. Use default or provide AWS S3 location for the file containing Banner text.
+    Type: String
+    
+  BastionTenancy:
+    Description: 'VPC Tenancy in which bastion host will be launched. Options: ''dedicated'' or ''default'''
+    Type: String
+    Default: default
+    AllowedValues:
+      - dedicated
+      - default
+      
+  BastionInstanceType:
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+    Default: t2.micro
+    Description: Amazon EC2 instance type for the bastion instance. t2 instance types are not supported for dedicated VPC tenancy (option below).
+    Type: String
+    
+  EnableBanner:
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+    Description: >-
+      To include a banner to be displayed when connecting via SSH to the
+      bastion, set this parameter to true
+    Type: String
+    
+  EnableTCPForwarding:
+    Type: String
+    Description: Enable/Disable TCP Forwarding
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+      
+  EnableX11Forwarding:
+    Type: String
+    Description: Enable/Disable X11 Forwarding
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+      
+  KeyPairName:
+    Description: >-
+      Enter a Public/private key pair. If you do not have one in this AWS Region,
+      create it before continuing
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    
+  RemoteAccessCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: Allowed CIDR block in the x.x.x.x/x format for external SSH access to the bastion host
+    Type: String
+    
+    
+  AltInitScript:
+    AllowedPattern: ^http.*|^$
+    ConstraintDescription: URL must begin with http
+    Description: Optional. Specify custom bootstrap script AWS S3 location to run during bastion host setup
+    Default: ''
+    Type: String
+    
+  OSImageOverride:
+    Description: Optional. Specify a region specific image to use for the instance
+    Type: String
+    Default: ''
+    
+
+        
+Mappings:
+
+  AWSAMIRegionMap:
+    AMI:
+      AMZNLINUXHVM: amzn-ami-hvm-2018.03.0.20180811-x86_64-gp2
+    ap-northeast-1:
+      AMZNLINUXHVM: ami-06cd52961ce9f0d85
+    ap-northeast-2:
+      AMZNLINUXHVM: ami-0a10b2721688ce9d2
+    ap-south-1:
+      AMZNLINUXHVM: ami-0912f71e06545ad88
+    ap-southeast-1:
+      AMZNLINUXHVM: ami-08569b978cc4dfa10
+    ap-southeast-2:
+      AMZNLINUXHVM: ami-09b42976632b27e9b
+    ca-central-1:
+      AMZNLINUXHVM: ami-0b18956f
+    eu-central-1:
+      AMZNLINUXHVM: ami-0233214e13e500f77
+    eu-west-1:
+      AMZNLINUXHVM: ami-047bb4163c506cd98
+    eu-west-2:
+      AMZNLINUXHVM: ami-f976839e
+    eu-west-3:
+      AMZNLINUXHVM: ami-0ebc281c20e89ba4b
+    sa-east-1:
+      AMZNLINUXHVM: ami-07b14488da8ea02a0
+    us-east-1:
+      AMZNLINUXHVM: ami-0ff8a91507f77f867
+    us-east-2:
+      AMZNLINUXHVM: ami-0b59bfac6be064b78
+    us-west-1:
+      AMZNLINUXHVM: ami-0bdb828fd58c52235
+    us-west-2:
+      AMZNLINUXHVM: ami-a0cfeed8
+      
+  LinuxAMINameMap:
+    Amazon-Linux-HVM:
+      Code: AMZNLINUXHVM
+      
+Conditions:
+  
+  GovCloudCondition: !Equals 
+    - !Ref 'AWS::Region'
+    - us-gov-west-1
+    
+  UseAlternativeInitialization: !Not 
+    - !Equals 
+      - !Ref AltInitScript
+      - ''
+      
+  UseOSImageOverride: !Not 
+    - !Equals 
+      - !Ref OSImageOverride
+      - ''
+      
+Resources:
+  
+  EC2SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint: !Ref NotificationList
+        Protocol: email
+        
+  BastionMainLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: !Ref LogsRetentionInDays
+    
+  SSHMetricFilter:
+    Type: 'AWS::Logs::MetricFilter'
+    Properties:
+      LogGroupName: !Ref BastionMainLogGroup
+      FilterPattern: ON FROM USER PWD
+      MetricTransformations:
+        - MetricName: SSHCommandCount
+          MetricValue: 1
+          MetricNamespace: !Join 
+            - /
+            - - AWSQuickStart
+              - !Ref 'AWS::StackName'
+
+  BastionSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: !Ref 'AWS::StackName'
+      VpcId: {'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'}
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref RemoteAccessCIDR
+        - IpProtocol: icmp
+          FromPort: '-1'
+          ToPort: '-1'
+          CidrIp: !Ref RemoteAccessCIDR
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-BastionSecurityGroup'          
+                          
+  BastionHostRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Policies:
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                Resource: !Sub 
+                  - 'arn:${Partition}:s3:::aws-quickstart/quickstart-linux-bastion/*'
+                  - Partition: !If 
+                      - GovCloudCondition
+                      - aws-us-gov
+                      - aws
+                Effect: Allow
+          PolicyName: aws-quick-start-s3-policy
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:GetLogEvents'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogGroups'
+                  - 'logs:DescribeLogStreams'
+                  - 'logs:PutRetentionPolicy'
+                  - 'logs:PutMetricFilter'
+                  - 'logs:CreateLogGroup'
+                Resource: !Sub 
+                  - >-
+                    arn:${Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${BastionMainLogGroup}:*
+                  - Partition: !If 
+                      - GovCloudCondition
+                      - aws-us-gov
+                      - aws
+                Effect: Allow
+          PolicyName: bastion-cloudwatch-logs-policy
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'ec2:AssociateAddress'
+                  - 'ec2:DescribeAddresses'
+                Resource:
+                  - '*'
+                Effect: Allow
+          PolicyName: bastion-eip-policy
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Effect: Allow
+        Version: 2012-10-17
+        
+  BastionHostProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref BastionHostRole
+      Path: /
+      
+  EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      
+  BastionAutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      DesiredCapacity: '1'
+      LaunchConfigurationName: !Ref BastionLaunchConfiguration
+      MaxSize: '1'
+      MinSize: '1'
+      Tags:
+      - Key: Name
+        Value: !Sub
+        - 'SSH bastion host/instance ${CidrBlock}'
+        - CidrBlock: {'Fn::ImportValue': !Sub '${ParentVPCStack}-CidrBlock'}
+        PropagateAtLaunch: true
+      NotificationConfigurations:
+      - TopicARN: !Ref EC2SNSTopic
+        NotificationTypes:
+        - 'autoscaling:EC2_INSTANCE_LAUNCH_ERROR'
+        - 'autoscaling:EC2_INSTANCE_TERMINATE_ERROR'
+      VPCZoneIdentifier: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetsPublic'}]
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        SuspendProcesses:
+        - HealthCheck
+        - ReplaceUnhealthy
+        - AZRebalance
+        - AlarmNotification
+        - ScheduledActions
+        WaitOnResourceSignals: true        
+        
+  BastionLaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Authentication':
+        S3AccessCreds:
+          type: S3
+          roleName: !Ref BastionHostRole
+          buckets:
+            - "aws-quickstart"
+      'AWS::CloudFormation::Init':
+        config:
+          files:
+            /tmp/bastion_bootstrap.sh:
+              source: !If 
+                - UseAlternativeInitialization
+                - !Ref AltInitScript
+                - !Sub 
+                  - >-
+                    https://aws-quickstart.${QSS3Region}.amazonaws.com/quickstart-linux-bastion/scripts/bastion_bootstrap.sh
+                  - QSS3Region: !If 
+                      - GovCloudCondition
+                      - s3-us-gov-west-1
+                      - s3
+              mode: '000550'
+              owner: root
+              group: root
+              authentication: S3AccessCreds
+            /home/ec2-user/.psqlrc: 
+              content: !Sub | 
+                \set PROMPT1 '%[%033[1;31m%]%M%[%033[0m%]:%> %[%033[1;33m%]%n%[%033[0m%]@%/%R%#%x '
+                \pset pager off
+                \set COMP_KEYWORD_CASE upper
+                \set VERBOSITY verbose
+                \set HISTCONTROL ignorespace
+                \set HISTFILE ~/.psql_history- :DBNAME
+                \set HISTSIZE 5000
+                \set version 'SELECT version();'
+                \set extensions 'select * from pg_available_extensions;'
+              mode: "000644"
+              owner: "root"
+              group: "root"            
+          commands:
+            b-bootstrap:
+              command: !Join 
+                - ''
+                - - ./tmp/bastion_bootstrap.sh
+                  - ' --banner '
+                  - !Ref BastionBanner
+                  - ' --enable '
+                  - !Ref EnableBanner
+                  - ' --tcp-forwarding '
+                  - !Ref EnableTCPForwarding
+                  - ' --x11-forwarding '
+                  - !Ref EnableX11Forwarding
+    Properties:
+      AssociatePublicIpAddress: 'true'
+      PlacementTenancy: !Ref BastionTenancy
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: !Ref BastionHostProfile
+      ImageId: !If 
+        - UseOSImageOverride
+        - !Ref OSImageOverride
+        - !FindInMap 
+          - AWSAMIRegionMap
+          - !Ref 'AWS::Region'
+          - !FindInMap 
+            - LinuxAMINameMap
+            - 'Amazon-Linux-HVM'
+            - Code
+      SecurityGroups:
+        - !Ref BastionSecurityGroup
+      InstanceType: !Ref BastionInstanceType
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash
+            - |
+              set -x
+            - |
+              export PATH=$PATH:/usr/local/bin
+            - |
+              which pip &> /dev/null
+            - |
+              if [ $? -ne 0 ] ; then
+            - |2
+                  echo "PIP NOT INSTALLED"
+            - |2
+                  [ `which yum` ] && $(yum install -y epel-release; yum install -y python-pip) && echo "PIP INSTALLED"
+            - |2
+                  [ `which apt-get` ] && apt-get -y update && apt-get -y install python-pip && echo "PIP INSTALLED"
+            - |
+              fi
+            - |
+              pip install --upgrade pip &> /dev/null
+            - |
+              pip install awscli --ignore-installed six &> /dev/null
+            - >
+              easy_install
+              https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+            - |
+              yum install -y postgresql96 &> /dev/null
+            - EIP_LIST="
+            - !Ref EIP
+            - |
+              "
+            - CLOUDWATCHGROUP=
+            - !Ref BastionMainLogGroup
+            - |+
+
+            - 'cfn-init -v --stack '
+            - !Ref 'AWS::StackName'
+            - ' --resource BastionLaunchConfiguration --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+            - 'cfn-signal -e $? --stack '
+            - !Ref 'AWS::StackName'
+            - ' --resource BastionAutoScalingGroup --region '
+            - !Ref 'AWS::Region'
+            - |+  
+
+  CPUTooHighAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'Average CPU utilization over last 10 minutes higher than 80%'
+      Namespace: 'AWS/EC2'
+      MetricName: CPUUtilization
+      Statistic: Average
+      Period: 600
+      EvaluationPeriods: 1
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 80
+      AlarmActions:
+      - Ref: EC2SNSTopic
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value: !Ref BastionAutoScalingGroup
+
+Outputs:
+  TemplateID:
+    Description: 'Template ID'
+    Value: 'VPC-SSH-Bastion'
+    
+  BastionAutoScalingGroup:
+    Description: Auto Scaling Group Reference ID
+    Value: !Ref BastionAutoScalingGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-BastionAutoScalingGroup'
+      
+  EIP:
+    Description: The public IP address of the SSH bastion host/instance
+    Value: !Ref EIP
+    Export:
+      Name: !Sub '${AWS::StackName}-EIP'
+      
+  SSHCommand:      
+    Description: SSH command line
+    Value: !Join
+             - ''
+             - - 'ssh -i "'
+               - !Ref KeyPairName
+               - '.pem" '
+               - 'ec2-user@'
+               - !Ref EIP
+    
+  CloudWatchLogs:
+    Description: CloudWatch Logs GroupName. Your SSH logs will be stored here.
+    Value: !Ref BastionMainLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudWatchLogs'
+      
+  BastionSecurityGroupID:
+    Description: Use this Security Group to reference incoming traffic from the SSH bastion host/instance
+    Value: !Ref BastionSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-BastionSecurityGroupID'
