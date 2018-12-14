@@ -53,6 +53,7 @@ Parameters:
       - 9.6.8
       - 9.6.9
       - 10.4
+      - 10.5
      
   DBInstanceClass:
     Default: db.r4.large
@@ -200,6 +201,9 @@ Mappings:
       "family": "aurora-postgresql9.6"
     "10.4":
       "family": "aurora-postgresql10"
+    "10.5":
+      "family": "aurora-postgresql10"
+      
 
       
 ###############################################################################
@@ -453,6 +457,7 @@ Resources:
                 Effect: "Allow"
                 Action:
                   - "lambda:DeleteFunction"
+                  - "lambda:GetFunctionConfiguration"
                 Resource: "arn:aws:lambda:*:*:function:SecretsManager*"
   
   CreateSecretRotationLambdaFn:
@@ -552,7 +557,6 @@ Resources:
     DependsOn:
       - SecretAuroraClusterAttachment
       - AuroraDBFirstInstance
-      - AuroraDBSecondInstance
     Properties:
       SecretId: !Ref AuroraMasterSecret
       RotationLambdaARN: !GetAtt CreateSecretRotationLambdaFnTrigger.SecretRotationLambdaARN
@@ -842,7 +846,7 @@ Resources:
       SnsTopicArn: !Ref DBSNSTopic
       SourceIds: 
       - !Ref AuroraDBFirstInstance
-      - !Ref AuroraDBSecondInstance
+      - !If [IsReplica, !Ref AuroraDBSecondInstance, !Ref "AWS::NoValue"]
       SourceType: 'db-instance'
       
   DBParameterGroupEventSubscription:
@@ -886,10 +890,9 @@ Resources:
     Condition: DoDBBootStrap
     Type: Custom::LambdaAPGBootStrap
     DependsOn:
+      - AuroraDBFirstInstance
       - AuroraSecretRotationSchedule
     Version: "1.0"
-    DependsOn:
-     - AuroraDBFirstInstance
     Properties:
       ServiceToken: !GetAtt 'DBBootStrapLambdaFn.Arn'
 
