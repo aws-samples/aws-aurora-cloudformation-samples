@@ -113,18 +113,18 @@ Parameters:
   ProjectCostCenter:
     Type: String
     Description: The ProjectCostCenter tag is used to designate the cost center associated with the project of the given AWS resource.
-    AllowedPattern: "^[0-9]+$"
-    ConstraintDescription: Only numbers are allowed.
+    AllowedPattern: "^[a-zA-Z0-9]+$"
+    ConstraintDescription:  provide a valid cost center
  
-  Owner:
+  ServiceOwnersEmailContact:
     Type: String
-    Description: The Owner tag is used to designate the business owner email address associated with the given AWS resource.
+    Description: The ServiceOwnersEmailContact tag is used to designate business owner(s) email address associated with the given AWS resource for sending outage or maintenance notifications
     AllowedPattern: '^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
     ConstraintDescription: provide a valid email address.
     
   NotificationList:
     Type: String
-    Description: The Email notification list is used to configure a SNS topic for sending cloudwatch alarm notifications
+    Description: The Email notification list is used to configure a SNS topic for sending cloudwatch alarm and RDS Event notifications
     AllowedPattern: '^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
     ConstraintDescription: provide a valid email address.
     
@@ -185,7 +185,7 @@ Metadata:
           - Application
           - ApplicationVersion
           - ProjectCostCenter          
-          - Owner
+          - ServiceOwnersEmailContact
           - Confidentiality
           - Compliance
           
@@ -598,6 +598,9 @@ Resources:
           Key: ProjectCostCenter
           Value: !Ref ProjectCostCenter
         -
+          Key: ServiceOwnersEmailContact
+          Value: !Ref ServiceOwnersEmailContact          
+        -
           Key: Confidentiality
           Value: !Ref Confidentiality
         -
@@ -637,8 +640,8 @@ Resources:
           Key: ProjectCostCenter
           Value: !Ref ProjectCostCenter
         -
-          Key: Owner
-          Value: !Ref Owner
+          Key: ServiceOwnersEmailContact
+          Value: !Ref ServiceOwnersEmailContact
         -
           Key: Confidentiality
           Value: !Ref Confidentiality
@@ -682,8 +685,8 @@ Resources:
           Key: ProjectCostCenter
           Value: !Ref ProjectCostCenter
         -
-          Key: Owner
-          Value: !Ref Owner
+          Key: ServiceOwnersEmailContact
+          Value: !Ref ServiceOwnersEmailContact
         -
           Key: Confidentiality
           Value: !Ref Confidentiality

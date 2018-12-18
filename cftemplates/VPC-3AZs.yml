@@ -15,7 +15,7 @@ Metadata:
         
 Parameters:
   ClassB:
-    Description: 'Specify the 2nd Octet of the Class B IPv4 CIDR for the VPC (10.XXX.0.0/16)'
+    Description: 'Specify the 2nd Octet of IPv4 CIDR block for the VPC (10.XXX.0.0/16) in the range [0-255]'
     Type: Number
     Default: 0
     ConstraintDescription: 'Must be in the range [0-255]'
@@ -32,7 +32,7 @@ Resources:
       InstanceTenancy: default
       Tags:
       - Key: Name
-        Value: !Sub '10.${ClassB}.0.0/16'
+        Value: !Sub '${AWS::StackName}-VPC'
         
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'

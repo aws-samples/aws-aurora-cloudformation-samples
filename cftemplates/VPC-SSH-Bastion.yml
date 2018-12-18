@@ -335,7 +335,7 @@ Resources:
       Tags:
       - Key: Name
         Value: !Sub
-        - 'SSH bastion host/instance ${CidrBlock}'
+        - '${AWS::StackName}-BastionHost-${CidrBlock}'
         - CidrBlock: {'Fn::ImportValue': !Sub '${ParentVPCStack}-CidrBlock'}
         PropagateAtLaunch: true
       NotificationConfigurations:
