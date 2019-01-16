@@ -262,6 +262,16 @@ Resources:
       Path: "/"
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      Policies:
+        - 
+          PolicyName: "secretaccess"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - 
+                Effect: "Allow"
+                Action: "secretsmanager:GetSecretValue"
+                Resource: !Ref AuroraMasterSecret
         
   DBSNSTopic:
     Type: AWS::SNS::Topic
@@ -415,12 +425,6 @@ Resources:
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action: "secretsmanager:DeleteSecret"
-            Resource: "*"
-          -
-            Effect: "Allow"
-            Principal:
-              AWS: !GetAtt DBBootStrapLambdaRole.Arn
-            Action: "secretsmanager:GetSecretValue"
             Resource: "*"
   
   CreateSecretRotationLambdaRole:
