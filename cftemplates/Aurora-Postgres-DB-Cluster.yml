@@ -570,6 +570,7 @@ Resources:
   AuroraDBCluster:
     Type: AWS::RDS::DBCluster
     DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
     Properties:
       Engine: aurora-postgresql
       EngineVersion: !Ref DBEngineVersion
