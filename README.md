@@ -25,7 +25,7 @@ The stacks are integrated using exported output values. Using three different Cl
 
 ## Best practices, Prerequisites and Set up Instructions
 
-For Best practices incorporated in the sample AWS CloudFormation samples, prerequisites and set up instructions refer the following document.
+For Best practices incorporated in the sample AWS CloudFormation samples, prerequisites and set up instructions refer the following document. You can download this document and then launch AWS CloudFormation directly from it, by selecting the ![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png) buttons embedded in the set up section.
 
 [Deploy an Amazon Aurora PostgreSQL DB cluster with recommended best practices using AWS CloudFormation](Instructions/Deploy%20an%20Amazon%20Aurora%20PostgreSQL%20DB%20cluster%20with%20recommended%20best%20practices%20using%20AWS%20CloudFormation.pdf)
 
