@@ -52,20 +52,31 @@ Parameters:
     AllowedValues:
       - 9.6.8
       - 9.6.9
+      - 9.6.11
+      - 9.6.12
       - 10.4
       - 10.5
+      - 10.6
+      - 10.7
      
   DBInstanceClass:
     Default: db.r4.large
-    Description: Database Instance Class
+    Description: Database Instance Class. db.r5 instance classes are supported for Aurora PostgreSQL 10.6 or later. db.t3.medium instance class is supported for Aurora PostgreSQL 10.7 or later.
     Type: String
     AllowedValues:
+    - db.t3.medium
     - db.r4.large
     - db.r4.xlarge
     - db.r4.2xlarge
     - db.r4.4xlarge
     - db.r4.8xlarge
     - db.r4.16xlarge
+    - db.r5.large
+    - db.r5.xlarge
+    - db.r5.2xlarge
+    - db.r5.4xlarge
+    - db.r5.12xlarge
+    - db.r5.24xlarge
 
   DBSnapshotName:
     Description: Optional. DB Snapshot ID to restore database. Leave this blank if you are not restoring from a snapshot.
@@ -73,12 +84,12 @@ Parameters:
     Default: ""
 
   LambdaBootStrapS3Bucket:
-    Description: Optional. Specify S3 bucket name for e.g. apgbootstrapscripts where Lambda DB Bootstrap Python 3.6 script is stored.
+    Description: Optional. Specify S3 bucket name for e.g. apgbootstrapscripts where Lambda DB Bootstrap Python script is stored.
     Default: ''
     Type: String
 
   LambdaBootStrapS3Key:
-    Description: Optional. Specify S3 key for e.g. lambda/dbbootstrap.zip where Lambda DB Bootstrap Python 3.6 script is stored.
+    Description: Optional. Specify S3 key for e.g. lambda/dbbootstrap.zip where Lambda DB Bootstrap Python script is stored.
     Default: ''
     Type: String
   
@@ -199,11 +210,18 @@ Mappings:
       "family": "aurora-postgresql9.6"
     "9.6.9": 
       "family": "aurora-postgresql9.6"
+    "9.6.11": 
+      "family": "aurora-postgresql9.6"
+    "9.6.12": 
+      "family": "aurora-postgresql9.6"
     "10.4":
       "family": "aurora-postgresql10"
     "10.5":
       "family": "aurora-postgresql10"
-      
+    "10.6":
+      "family": "aurora-postgresql10"
+    "10.7":
+      "family": "aurora-postgresql10"
 
       
 ###############################################################################
@@ -462,6 +480,7 @@ Resources:
                 Action:
                   - "lambda:DeleteFunction"
                   - "lambda:GetFunctionConfiguration"
+                  - "lambda:RemovePermission"
                 Resource: "arn:aws:lambda:*:*:function:SecretsManager*"
   
   CreateSecretRotationLambdaFn:
@@ -472,9 +491,9 @@ Resources:
     Properties:
       Code:
         ZipFile: |
-          from __future__ import print_function
           import cfnresponse
           import boto3
+          from botocore.vendored import requests
           
           def lambda_handler(event, context):
               slrepoclient = boto3.client('serverlessrepo')
@@ -491,6 +510,7 @@ Resources:
               try: 
                   if event['RequestType'] == 'Create':
                       serverlessreporesponse = slrepoclient.create_cloud_formation_change_set(ApplicationId='arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser', 
+                      Capabilities=['CAPABILITY_IAM', 'CAPABILITY_RESOURCE_POLICY'],
                       ParameterOverrides=[
                           {
                               'Name': 'endpoint',
@@ -536,7 +556,7 @@ Resources:
       Handler: index.lambda_handler
       MemorySize: 128
       Role: !GetAtt CreateSecretRotationLambdaRole.Arn
-      Runtime: python2.7
+      Runtime: python3.6
       Timeout: 120
       VpcConfig: 
         SecurityGroupIds: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SecretRotationLambdaSecurityGroup'}]
@@ -880,7 +900,7 @@ Resources:
       Handler: dbbootstrap.handler
       MemorySize: 128
       Role: !GetAtt DBBootStrapLambdaRole.Arn
-      Runtime: python2.7
+      Runtime: python3.6
       Timeout: 60
       VpcConfig: 
         SecurityGroupIds: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SecretRotationLambdaSecurityGroup'}]
