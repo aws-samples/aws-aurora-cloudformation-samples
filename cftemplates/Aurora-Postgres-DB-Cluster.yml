@@ -474,14 +474,14 @@ Resources:
                 Action:
                   - "cloudformation:DescribeStackResources"
                   - "cloudformation:DeleteStack"
-                Resource: "*"
+                Resource: !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/serverlessrepo-${AWS::StackName}-SecretRotationLambdaStack/*'
               - 
                 Effect: "Allow"
                 Action:
                   - "lambda:DeleteFunction"
                   - "lambda:GetFunctionConfiguration"
                   - "lambda:RemovePermission"
-                Resource: "arn:aws:lambda:*:*:function:SecretsManager*"
+                Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:SecretsManager-SecretRotationFn-${AWS::StackName}'
   
   CreateSecretRotationLambdaFn:
     Condition: IsNotUseDBSnapshot
@@ -537,7 +537,7 @@ Resources:
                       
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "None")               
                   elif event['RequestType'] == 'Delete':
-                      SecretRotationLambdaStackName = cfclient.describe_stack_resources(PhysicalResourceId=SecretRotationLambdaFnName,LogicalResourceId='SecretsManagerRDSPostgreSQLRotationSingleUser')['StackResources'][0]['StackName']
+                      SecretRotationLambdaStackName = 'serverlessrepo-' + SecretRotationLambdaStackName
                       response = cfclient.delete_stack(StackName=SecretRotationLambdaStackName)
                       waiter = cfclient.get_waiter('stack_delete_complete')
                       waiter.wait(StackName='string',WaiterConfig={'Delay': 10,'MaxAttempts': 60})
