@@ -71,10 +71,10 @@ Parameters:
     AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]    
     
   BastionBanner:
-    Default: >-
-      https://aws-quickstart.s3.amazonaws.com/quickstart-linux-bastion/scripts/banner_message.txt
-    Description: Banner text to display upon login. Use default or provide AWS S3 location for the file containing Banner text.
+    Default: default
+    Description: Banner text to display upon login. Leave at default or provide AWS S3 location for the file containing Banner text.
     Type: String
+    ConstraintDescription: URL must begin with s3://
     
   BastionTenancy:
     Description: 'VPC Tenancy in which bastion host will be launched. Options: ''dedicated'' or ''default'''
@@ -156,49 +156,57 @@ Parameters:
 Mappings:
 
   AWSAMIRegionMap:
-    AMI:
-      AMZNLINUXHVM: amzn-ami-hvm-2018.03.0.20180811-x86_64-gp2
     ap-northeast-1:
-      AMZNLINUXHVM: ami-06cd52961ce9f0d85
+      AMZNLINUXHVM: ami-0318ecd6d05daa212
     ap-northeast-2:
-      AMZNLINUXHVM: ami-0a10b2721688ce9d2
+      AMZNLINUXHVM: ami-09391a0ad9f9243b6
     ap-south-1:
-      AMZNLINUXHVM: ami-0912f71e06545ad88
+      AMZNLINUXHVM: ami-04b2519c83e2a7ea5
     ap-southeast-1:
-      AMZNLINUXHVM: ami-08569b978cc4dfa10
+      AMZNLINUXHVM: ami-0dff4318d85149d5d
     ap-southeast-2:
-      AMZNLINUXHVM: ami-09b42976632b27e9b
+      AMZNLINUXHVM: ami-050e1ec030abb8dde
     ca-central-1:
-      AMZNLINUXHVM: ami-0b18956f
+      AMZNLINUXHVM: ami-021321e9bc16d5186
     eu-central-1:
-      AMZNLINUXHVM: ami-0233214e13e500f77
+      AMZNLINUXHVM: ami-03ab4e8f1d88ce614
+    me-south-1:
+      AMZNLINUXHVM: ami-02a841b5a224a1caf
+    ap-east-1:
+      AMZNLINUXHVM: ami-c86e28b9
+    eu-north-1:
+      AMZNLINUXHVM: ami-0c5254b956817b326
     eu-west-1:
-      AMZNLINUXHVM: ami-047bb4163c506cd98
+      AMZNLINUXHVM: ami-00890f614e48ce866
     eu-west-2:
-      AMZNLINUXHVM: ami-f976839e
+      AMZNLINUXHVM: ami-0596aab74a1ce3983
     eu-west-3:
-      AMZNLINUXHVM: ami-0ebc281c20e89ba4b
+      AMZNLINUXHVM: ami-06cba15121418cdcb
     sa-east-1:
-      AMZNLINUXHVM: ami-07b14488da8ea02a0
+      AMZNLINUXHVM: ami-03e1e4abf50e14ded
     us-east-1:
-      AMZNLINUXHVM: ami-0ff8a91507f77f867
+      AMZNLINUXHVM: ami-0915e09cc7ceee3ab
+    us-gov-west-1:
+      AMZNLINUXHVM: ami-f5e4d294
+    us-gov-east-1:
+      AMZNLINUXHVM: ami-51ef0320
     us-east-2:
-      AMZNLINUXHVM: ami-0b59bfac6be064b78
+      AMZNLINUXHVM: ami-097834fcb3081f51a
     us-west-1:
-      AMZNLINUXHVM: ami-0bdb828fd58c52235
+      AMZNLINUXHVM: ami-0027eed75be6f3bf4
     us-west-2:
-      AMZNLINUXHVM: ami-a0cfeed8
+      AMZNLINUXHVM: ami-01f08ef3e76b957e5
+    cn-north-1:
+      AMZNLINUXHVM: ami-04b1196830276cd1f
+    cn-northwest-1:
+      AMZNLINUXHVM: ami-0bae393f70322bed6
       
   LinuxAMINameMap:
     Amazon-Linux-HVM:
       Code: AMZNLINUXHVM
       
 Conditions:
-  
-  GovCloudCondition: !Equals 
-    - !Ref 'AWS::Region'
-    - us-gov-west-1
-    
+      
   UseAlternativeInitialization: !Not 
     - !Equals 
       - !Ref AltInitScript
@@ -209,6 +217,8 @@ Conditions:
       - !Ref OSImageOverride
       - ''
       
+  DefaultBanner: !Equals [!Ref BastionBanner, 'default']    
+  
 Resources:
   
   EC2SNSTopic:
@@ -263,12 +273,7 @@ Resources:
             Statement:
               - Action:
                   - 's3:GetObject'
-                Resource: !Sub 
-                  - 'arn:${Partition}:s3:::aws-quickstart/quickstart-linux-bastion/*'
-                  - Partition: !If 
-                      - GovCloudCondition
-                      - aws-us-gov
-                      - aws
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::aws-quickstart-${AWS::Region}/quickstart-linux-bastion/*'
                 Effect: Allow
           PolicyName: aws-quick-start-s3-policy
         - PolicyDocument:
@@ -283,13 +288,7 @@ Resources:
                   - 'logs:PutRetentionPolicy'
                   - 'logs:PutMetricFilter'
                   - 'logs:CreateLogGroup'
-                Resource: !Sub 
-                  - >-
-                    arn:${Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${BastionMainLogGroup}:*
-                  - Partition: !If 
-                      - GovCloudCondition
-                      - aws-us-gov
-                      - aws
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${BastionMainLogGroup}:*"
                 Effect: Allow
           PolicyName: bastion-cloudwatch-logs-policy
         - PolicyDocument:
@@ -302,6 +301,9 @@ Resources:
                   - '*'
                 Effect: Allow
           PolicyName: bastion-eip-policy
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
       Path: /
       AssumeRolePolicyDocument:
         Statement:
@@ -309,7 +311,7 @@ Resources:
               - 'sts:AssumeRole'
             Principal:
               Service:
-                - ec2.amazonaws.com
+                - !Sub 'ec2.${AWS::URLSuffix}'
             Effect: Allow
         Version: 2012-10-17
         
@@ -367,7 +369,7 @@ Resources:
           type: S3
           roleName: !Ref BastionHostRole
           buckets:
-            - "aws-quickstart"
+            - !Sub 'aws-quickstart-${AWS::Region}'
       'AWS::CloudFormation::Init':
         config:
           files:
@@ -375,13 +377,7 @@ Resources:
               source: !If 
                 - UseAlternativeInitialization
                 - !Ref AltInitScript
-                - !Sub 
-                  - >-
-                    https://aws-quickstart.${QSS3Region}.amazonaws.com/quickstart-linux-bastion/scripts/bastion_bootstrap.sh
-                  - QSS3Region: !If 
-                      - GovCloudCondition
-                      - s3-us-gov-west-1
-                      - s3
+                - !Sub 'https://aws-quickstart-${AWS::Region}.s3.${AWS::Region}.${AWS::URLSuffix}/quickstart-linux-bastion/scripts/bastion_bootstrap.sh'
               mode: '000550'
               owner: root
               group: root
@@ -402,17 +398,17 @@ Resources:
               group: "root"            
           commands:
             b-bootstrap:
-              command: !Join 
-                - ''
-                - - ./tmp/bastion_bootstrap.sh
-                  - ' --banner '
-                  - !Ref BastionBanner
-                  - ' --enable '
-                  - !Ref EnableBanner
-                  - ' --tcp-forwarding '
-                  - !Ref EnableTCPForwarding
-                  - ' --x11-forwarding '
-                  - !Ref EnableX11Forwarding
+              cwd: '/tmp/'
+              command: !Sub 
+                - "REGION=${AWS::Region} URL_SUFFIX=${AWS::URLSuffix} BANNER_REGION=${AWS::Region} ./bastion_bootstrap.sh --banner ${BannerUrl} --enable ${EnableBanner} --tcp-forwarding ${EnableTCPForwarding} --x11-forwarding ${EnableX11Forwarding}"
+                - BannerUrl: !If
+                    - DefaultBanner
+                    - !Sub 's3://aws-quickstart-${AWS::Region}/quickstart-linux-bastion/scripts/banner_message.txt'
+                    - !Ref BastionBanner
+            c-restartsshd:
+              command: /etc/init.d/sshd restart
+            d-yumupdate:
+              command: yum update -y
     Properties:
       AssociatePublicIpAddress: 'true'
       PlacementTenancy: !Ref BastionTenancy

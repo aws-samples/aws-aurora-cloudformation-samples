@@ -54,10 +54,14 @@ Parameters:
       - 9.6.9
       - 9.6.11
       - 9.6.12
+      - 9.6.16
       - 10.4
       - 10.5
       - 10.6
       - 10.7
+      - 10.11
+      - 11.4
+      - 11.6
      
   DBInstanceClass:
     Default: db.r4.large
@@ -75,7 +79,9 @@ Parameters:
     - db.r5.xlarge
     - db.r5.2xlarge
     - db.r5.4xlarge
+    - db.r5.8xlarge
     - db.r5.12xlarge
+    - db.r5.16xlarge
     - db.r5.24xlarge
 
   DBSnapshotName:
@@ -214,6 +220,8 @@ Mappings:
       "family": "aurora-postgresql9.6"
     "9.6.12": 
       "family": "aurora-postgresql9.6"
+    "9.6.16": 
+      "family": "aurora-postgresql9.6"
     "10.4":
       "family": "aurora-postgresql10"
     "10.5":
@@ -222,6 +230,12 @@ Mappings:
       "family": "aurora-postgresql10"
     "10.7":
       "family": "aurora-postgresql10"
+    "10.11":
+      "family": "aurora-postgresql10"
+    "11.4":
+      "family": "aurora-postgresql11"
+    "11.6":
+      "family": "aurora-postgresql11"
 
       
 ###############################################################################
