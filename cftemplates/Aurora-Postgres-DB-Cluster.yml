@@ -48,33 +48,21 @@ Parameters:
   DBEngineVersion:
     Description: Select Database Engine Version
     Type: String
-    Default: 9.6.8
+    Default: 12.6
     AllowedValues:
-      - 9.6.8
-      - 9.6.9
-      - 9.6.11
-      - 9.6.12
-      - 9.6.16
-      - 10.4
-      - 10.5
-      - 10.6
-      - 10.7
-      - 10.11
-      - 11.4
-      - 11.6
+      - 9.6.21
+      - 10.16
+      - 11.11
+      - 12.4
+      - 12.6
      
   DBInstanceClass:
-    Default: db.r4.large
-    Description: Database Instance Class. db.r5 instance classes are supported for Aurora PostgreSQL 10.6 or later. db.t3.medium instance class is supported for Aurora PostgreSQL 10.7 or later.
+    Default: db.r5.large
+    Description: Database Instance Class. db.r6g instance classes are supported for Aurora PostgreSQL 12.4 and higher, 11.9 and higher. db.t3.medium instance class is supported for Aurora PostgreSQL 10.7 or later. db.t3.large instance class is supported for Aurora PostgreSQL 11.6 and higher, 10.11 and higher.
     Type: String
     AllowedValues:
     - db.t3.medium
-    - db.r4.large
-    - db.r4.xlarge
-    - db.r4.2xlarge
-    - db.r4.4xlarge
-    - db.r4.8xlarge
-    - db.r4.16xlarge
+    - db.t3.large
     - db.r5.large
     - db.r5.xlarge
     - db.r5.2xlarge
@@ -83,6 +71,13 @@ Parameters:
     - db.r5.12xlarge
     - db.r5.16xlarge
     - db.r5.24xlarge
+    - db.r6g.large
+    - db.r6g.xlarge
+    - db.r6g.2xlarge
+    - db.r6g.4xlarge
+    - db.r6g.8xlarge
+    - db.r6g.12xlarge
+    - db.r6g.16xlarge
 
   DBSnapshotName:
     Description: Optional. DB Snapshot ID to restore database. Leave this blank if you are not restoring from a snapshot.
@@ -212,30 +207,16 @@ Metadata:
  
 Mappings: 
   DBFamilyMap: 
-    "9.6.8": 
+    "9.6.21": 
       "family": "aurora-postgresql9.6"
-    "9.6.9": 
-      "family": "aurora-postgresql9.6"
-    "9.6.11": 
-      "family": "aurora-postgresql9.6"
-    "9.6.12": 
-      "family": "aurora-postgresql9.6"
-    "9.6.16": 
-      "family": "aurora-postgresql9.6"
-    "10.4":
+    "10.16":
       "family": "aurora-postgresql10"
-    "10.5":
-      "family": "aurora-postgresql10"
-    "10.6":
-      "family": "aurora-postgresql10"
-    "10.7":
-      "family": "aurora-postgresql10"
-    "10.11":
-      "family": "aurora-postgresql10"
-    "11.4":
+    "11.11":
       "family": "aurora-postgresql11"
-    "11.6":
-      "family": "aurora-postgresql11"
+    "12.4":
+      "family": "aurora-postgresql12"
+    "12.6":
+      "family": "aurora-postgresql12"
 
       
 ###############################################################################
@@ -496,6 +477,11 @@ Resources:
                   - "lambda:GetFunctionConfiguration"
                   - "lambda:RemovePermission"
                 Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:SecretsManager-SecretRotationFn-${AWS::StackName}'
+              - 
+                Effect: "Allow"
+                Action:
+                  - "iam:DetachRolePolicy"
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/serverlessrepo*'
   
   CreateSecretRotationLambdaFn:
     Condition: IsNotUseDBSnapshot
