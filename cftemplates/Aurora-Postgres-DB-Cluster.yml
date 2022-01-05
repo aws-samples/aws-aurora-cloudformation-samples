@@ -48,21 +48,19 @@ Parameters:
   DBEngineVersion:
     Description: Select Database Engine Version
     Type: String
-    Default: 12.6
+    Default: 13.4
     AllowedValues:
-      - 9.6.21
-      - 10.16
-      - 11.11
-      - 12.4
-      - 12.6
+      - 11.13
+      - 12.8
+      - 13.4
      
   DBInstanceClass:
-    Default: db.r5.large
-    Description: Database Instance Class. db.r6g instance classes are supported for Aurora PostgreSQL 12.4 and higher, 11.9 and higher. db.t3.medium instance class is supported for Aurora PostgreSQL 10.7 or later. db.t3.large instance class is supported for Aurora PostgreSQL 11.6 and higher, 10.11 and higher.
+    Default: db.r6g.large
+    Description: Database Instance Class
     Type: String
     AllowedValues:
-    - db.t3.medium
-    - db.t3.large
+    - db.t4g.medium
+    - db.t4g.large
     - db.r5.large
     - db.r5.xlarge
     - db.r5.2xlarge
@@ -78,6 +76,13 @@ Parameters:
     - db.r6g.8xlarge
     - db.r6g.12xlarge
     - db.r6g.16xlarge
+    - db.x2g.large
+    - db.x2g.xlarge
+    - db.x2g.2xlarge
+    - db.x2g.4xlarge
+    - db.x2g.8xlarge
+    - db.x2g.12xlarge
+    - db.x2g.16xlarge
 
   DBSnapshotName:
     Description: Optional. DB Snapshot ID to restore database. Leave this blank if you are not restoring from a snapshot.
@@ -207,16 +212,12 @@ Metadata:
  
 Mappings: 
   DBFamilyMap: 
-    "9.6.21": 
-      "family": "aurora-postgresql9.6"
-    "10.16":
-      "family": "aurora-postgresql10"
-    "11.11":
+    "11.13":
       "family": "aurora-postgresql11"
-    "12.4":
+    "12.8":
       "family": "aurora-postgresql12"
-    "12.6":
-      "family": "aurora-postgresql12"
+    "13.4":
+      "family": "aurora-postgresql13"
 
       
 ###############################################################################

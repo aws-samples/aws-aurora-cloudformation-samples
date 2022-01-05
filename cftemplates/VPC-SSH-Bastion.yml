@@ -86,17 +86,18 @@ Parameters:
       
   BastionInstanceType:
     AllowedValues:
-      - t2.nano
-      - t2.micro
-      - t2.small
-      - t2.medium
-      - t2.large
-      - m4.large
-      - m4.xlarge
-      - m4.2xlarge
-      - m4.4xlarge
-    Default: t2.micro
-    Description: Amazon EC2 instance type for the bastion instance. t2 instance types are not supported for dedicated VPC tenancy (option below).
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge      
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+    Default: t3.micro
+    Description: Amazon EC2 instance type for the bastion instance
     Type: String
     
   EnableBanner:
@@ -156,54 +157,62 @@ Parameters:
 Mappings:
 
   AWSAMIRegionMap:
+    af-south-1:
+      AMZNLINUX2: ami-0936d2754993c364e
     ap-northeast-1:
-      AMZNLINUXHVM: ami-0318ecd6d05daa212
+      AMZNLINUX2: ami-0ca38c7440de1749a
     ap-northeast-2:
-      AMZNLINUXHVM: ami-09391a0ad9f9243b6
+      AMZNLINUX2: ami-0f2c95e9fe3f8f80e
+    ap-northeast-3:
+      AMZNLINUX2: ami-06e9ad0943b200859
     ap-south-1:
-      AMZNLINUXHVM: ami-04b2519c83e2a7ea5
+      AMZNLINUX2: ami-010aff33ed5991201
     ap-southeast-1:
-      AMZNLINUXHVM: ami-0dff4318d85149d5d
+      AMZNLINUX2: ami-02f26adf094f51167
     ap-southeast-2:
-      AMZNLINUXHVM: ami-050e1ec030abb8dde
+      AMZNLINUX2: ami-0186908e2fdeea8f3
     ca-central-1:
-      AMZNLINUXHVM: ami-021321e9bc16d5186
+      AMZNLINUX2: ami-0101734ab73bd9e15
     eu-central-1:
-      AMZNLINUXHVM: ami-03ab4e8f1d88ce614
+      AMZNLINUX2: ami-043097594a7df80ec
     me-south-1:
-      AMZNLINUXHVM: ami-02a841b5a224a1caf
+      AMZNLINUX2: ami-0880769bc15eeec4f
     ap-east-1:
-      AMZNLINUXHVM: ami-c86e28b9
+      AMZNLINUX2: ami-0aca22cb23f122f27
     eu-north-1:
-      AMZNLINUXHVM: ami-0c5254b956817b326
+      AMZNLINUX2: ami-050fdc53cf6ba8f7f
+    eu-south-1:
+      AMZNLINUX2: ami-0f447354763f0eaac
     eu-west-1:
-      AMZNLINUXHVM: ami-00890f614e48ce866
+      AMZNLINUX2: ami-063d4ab14480ac177
     eu-west-2:
-      AMZNLINUXHVM: ami-0596aab74a1ce3983
+      AMZNLINUX2: ami-06dc09bb8854cbde3
     eu-west-3:
-      AMZNLINUXHVM: ami-06cba15121418cdcb
+      AMZNLINUX2: ami-0b3e57ee3b63dd76b
     sa-east-1:
-      AMZNLINUXHVM: ami-03e1e4abf50e14ded
+      AMZNLINUX2: ami-05373777d08895384
     us-east-1:
-      AMZNLINUXHVM: ami-0915e09cc7ceee3ab
+      AMZNLINUX2: ami-0d5eff06f840b45e9
     us-gov-west-1:
-      AMZNLINUXHVM: ami-f5e4d294
+      AMZNLINUX2: ami-0bbf3595bb2fb39ec
     us-gov-east-1:
-      AMZNLINUXHVM: ami-51ef0320
+      AMZNLINUX2: ami-0cc17d57bec8c6017
     us-east-2:
-      AMZNLINUXHVM: ami-097834fcb3081f51a
+      AMZNLINUX2: ami-077e31c4939f6a2f3
     us-west-1:
-      AMZNLINUXHVM: ami-0027eed75be6f3bf4
+      AMZNLINUX2: ami-04468e03c37242e1e
     us-west-2:
-      AMZNLINUXHVM: ami-01f08ef3e76b957e5
+      AMZNLINUX2: ami-0cf6f5c8a62fa5da6
     cn-north-1:
-      AMZNLINUXHVM: ami-04b1196830276cd1f
+      AMZNLINUX2: ami-0c52e2685c7218558
     cn-northwest-1:
-      AMZNLINUXHVM: ami-0bae393f70322bed6
+      AMZNLINUX2: ami-05b9b6d6acf8ae9b6
+
       
   LinuxAMINameMap:
-    Amazon-Linux-HVM:
-      Code: AMZNLINUXHVM
+    Amazon-Linux2-HVM:
+      Code: AMZNLINUX2
+      OS: Amazon
       
 Conditions:
       
@@ -237,7 +246,7 @@ Resources:
     Type: 'AWS::Logs::MetricFilter'
     Properties:
       LogGroupName: !Ref BastionMainLogGroup
-      FilterPattern: ON FROM USER PWD
+      FilterPattern: USER_LOGIN
       MetricTransformations:
         - MetricName: SSHCommandCount
           MetricValue: 1
@@ -301,6 +310,38 @@ Resources:
                   - '*'
                 Effect: Allow
           PolicyName: bastion-eip-policy
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:DescribeTags'
+                Resource:
+                  - '*'
+                Effect: Allow
+          PolicyName: ec2-selfaccess-policy
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'iam:ListAccountAliases'
+                  - 'autoscaling:DescribeAutoScalingInstances'
+                  - 'autoscaling:DescribeAutoScalingGroups'
+                  - 'autoscaling:DescribeLifecycle*'
+                Resource:
+                  - '*'
+                Effect: Allow
+          PolicyName: ASGSelfAccessPolicy
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'autoscaling:CompleteLifecycleAction'
+                  - 'autoscaling:RecordLifecycleActionHeartbeat'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${AWS::StackName}*'
+                Effect: Allow
+          PolicyName: ASGLifeCycleAccessPolicy          
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
@@ -332,6 +373,10 @@ Resources:
     Properties:
       DesiredCapacity: '1'
       LaunchConfigurationName: !Ref BastionLaunchConfiguration
+      LifecycleHookSpecificationList:
+      - LifecycleTransition: 'autoscaling:EC2_INSTANCE_LAUNCHING'
+        LifecycleHookName: instance-patching-reboot
+        HeartbeatTimeout: 3600    
       MaxSize: '1'
       MinSize: '1'
       Tags:
@@ -373,6 +418,19 @@ Resources:
       'AWS::CloudFormation::Init':
         config:
           files:
+            /tmp/auditd.rules:
+              mode: '000550'
+              owner: root
+              group: root
+              content: |
+                -a exit,always -F arch=b64 -S execve
+                -a exit,always -F arch=b32 -S execve
+            /tmp/auditing_configure.sh:
+              source: !Sub 'https://aws-quickstart-${AWS::Region}.s3.${AWS::Region}.${AWS::URLSuffix}/quickstart-linux-bastion/scripts/auditing_configure.sh'
+              mode: '000550'
+              owner: root
+              group: root
+              authentication: S3AccessCreds                
             /tmp/bastion_bootstrap.sh:
               source: !If 
                 - UseAlternativeInitialization
@@ -397,6 +455,11 @@ Resources:
               owner: "root"
               group: "root"            
           commands:
+            a-add_auditd_rules:
+              cwd: '/tmp/'
+              env:
+                BASTION_OS: !FindInMap [LinuxAMINameMap, 'Amazon-Linux2-HVM', OS]
+              command: "./auditing_configure.sh"
             b-bootstrap:
               cwd: '/tmp/'
               command: !Sub 
@@ -405,10 +468,6 @@ Resources:
                     - DefaultBanner
                     - !Sub 's3://aws-quickstart-${AWS::Region}/quickstart-linux-bastion/scripts/banner_message.txt'
                     - !Ref BastionBanner
-            c-restartsshd:
-              command: /etc/init.d/sshd restart
-            d-yumupdate:
-              command: yum update -y
     Properties:
       AssociatePublicIpAddress: 'true'
       PlacementTenancy: !Ref BastionTenancy
@@ -422,60 +481,73 @@ Resources:
           - !Ref 'AWS::Region'
           - !FindInMap 
             - LinuxAMINameMap
-            - 'Amazon-Linux-HVM'
+            - 'Amazon-Linux2-HVM'
             - Code
       SecurityGroups:
         - !Ref BastionSecurityGroup
       InstanceType: !Ref BastionInstanceType
-      UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - |
-              #!/bin/bash
-            - |
-              set -x
-            - |
-              export PATH=$PATH:/usr/local/bin
-            - |
-              which pip &> /dev/null
-            - |
-              if [ $? -ne 0 ] ; then
-            - |2
-                  echo "PIP NOT INSTALLED"
-            - |2
-                  [ `which yum` ] && $(yum install -y epel-release; yum install -y python-pip) && echo "PIP INSTALLED"
-            - |2
-                  [ `which apt-get` ] && apt-get -y update && apt-get -y install python-pip && echo "PIP INSTALLED"
-            - |
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            set -x
+            export PATH=$PATH:/usr/local/bin
+            
+            MYINSTANCEID="$(wget -q -O - http://169.254.169.254/latest/meta-data/instance-id)"
+            MYREGION="$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')"
+            NAMEOFASG=$(aws ec2 describe-tags --region $MYREGION --filters {"Name=resource-id,Values=$MYINSTANCEID","Name=key,Values=aws:autoscaling:groupName"} --output=text | cut -f5)
+            PATCHDONEFLAG=/root/patchingrebootwasdone.flg
+            
+            # Utility for checking if a restart is needed by any of the patching that was done
+            yum update yum-utils
+            
+            #cfn signaling functions
+            function cfn_fail
+            {
+            cfn-signal -e 1 --stack ${AWS::StackName} --region ${AWS::Region} --resource BastionAutoScalingGroup
+            exit 1
+            }
+
+            function cfn_success
+            {
+            cfn-signal -e 0 --stack ${AWS::StackName} --region ${AWS::Region} --resource BastionAutoScalingGroup
+            exit 0
+            }
+            
+            if [ ! -f $PATCHDONEFLAG ]; then
+              yum install git -y || apt-get install -y git || zypper -n install git
+              amazon-linux-extras enable postgresql12 && yum clean metadata && sudo yum install -y postgresql-contrib postgresql libpq-devel
+              until git clone https://github.com/aws-quickstart/quickstart-linux-utilities.git ; do echo "Retrying"; done
+              
+              cd /quickstart-linux-utilities;
+              source quickstart-cfn-tools.source;
+              
+              qs_update-os || qs_err;
+              qs_bootstrap_pip || qs_err " pip bootstrap failed ";
+              qs_aws-cfn-bootstrap || qs_err " cfn bootstrap failed ";
+              
+              needs-restarting -r 
+              
+              if [ $? -gt 0 ]; then
+                # Resetting userdata semaphore so that userdata will process again on restart
+                rm /var/lib/cloud/instances/*/sem/config_scripts_user
+                touch $PATCHDONEFLAG
+                reboot
+                sleep 30
               fi
-            - |
-              pip install --upgrade pip &> /dev/null
-            - |
-              pip install awscli --ignore-installed six &> /dev/null
-            - >
-              easy_install
-              https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
-            - |
-              yum install -y postgresql96 &> /dev/null
-            - EIP_LIST="
-            - !Ref EIP
-            - |
-              "
-            - CLOUDWATCHGROUP=
-            - !Ref BastionMainLogGroup
-            - |+
-
-            - 'cfn-init -v --stack '
-            - !Ref 'AWS::StackName'
-            - ' --resource BastionLaunchConfiguration --region '
-            - !Ref 'AWS::Region'
-            - |+
-
-            - 'cfn-signal -e $? --stack '
-            - !Ref 'AWS::StackName'
-            - ' --resource BastionAutoScalingGroup --region '
-            - !Ref 'AWS::Region'
-            - |+  
+            else
+              cd /quickstart-linux-utilities;
+              source quickstart-cfn-tools.source;
+            fi
+            
+            EIP_LIST="${EIP}"
+            CLOUDWATCHGROUP=${BastionMainLogGroup}
+            
+            cfn-init -v --stack '${AWS::StackName}' --resource BastionLaunchConfiguration --region ${AWS::Region} || cfn_fail
+            
+            aws --region ${AWS::Region} autoscaling complete-lifecycle-action --lifecycle-action-result CONTINUE --instance-id $MYINSTANCEID --lifecycle-hook-name instance-patching-reboot --auto-scaling-group-name $NAMEOFASG
+            
+            [ $(qs_status) == 0 ] && cfn_success || cfn_fail 
 
   CPUTooHighAlarm:
     Type: 'AWS::CloudWatch::Alarm'
