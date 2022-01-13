@@ -33,8 +33,8 @@ Parameters:
     Description: TCP/IP Port for the Database Instance
     Type: Number
     Default: 5432
-    ConstraintDescription: 'Must be in the range [1115-65535]'
-    MinValue: 1115
+    ConstraintDescription: 'Must be in the range [1150-65535]'
+    MinValue: 1150
     MaxValue: 65535
     
   DBUsername:
