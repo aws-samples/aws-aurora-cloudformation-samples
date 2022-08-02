@@ -516,7 +516,7 @@ Resources:
             
             if [ ! -f $PATCHDONEFLAG ]; then
               yum install git -y || apt-get install -y git || zypper -n install git
-              amazon-linux-extras enable postgresql12 && yum clean metadata && sudo yum install -y postgresql-contrib postgresql libpq-devel
+              amazon-linux-extras enable postgresql14 && yum clean metadata && sudo yum install -y postgresql-contrib postgresql libpq-devel
               until git clone https://github.com/aws-quickstart/quickstart-linux-utilities.git ; do echo "Retrying"; done
               
               cd /quickstart-linux-utilities;

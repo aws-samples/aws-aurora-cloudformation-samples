@@ -48,11 +48,12 @@ Parameters:
   DBEngineVersion:
     Description: Select Database Engine Version
     Type: String
-    Default: 13.4
+    Default: 13.7
     AllowedValues:
-      - 11.13
-      - 12.8
-      - 13.4
+      - 11.16
+      - 12.11
+      - 13.7
+      - 14.3
      
   DBInstanceClass:
     Default: db.r6g.large
@@ -212,12 +213,14 @@ Metadata:
  
 Mappings: 
   DBFamilyMap: 
-    "11.13":
+    "11.16":
       "family": "aurora-postgresql11"
-    "12.8":
+    "12.11":
       "family": "aurora-postgresql12"
-    "13.4":
+    "13.7":
       "family": "aurora-postgresql13"
+    "14.3":
+      "family": "aurora-postgresql14"
 
       
 ###############################################################################
@@ -477,12 +480,13 @@ Resources:
                   - "lambda:DeleteFunction"
                   - "lambda:GetFunctionConfiguration"
                   - "lambda:RemovePermission"
+                  - "lambda:TagResource"
                 Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:SecretsManager-SecretRotationFn-${AWS::StackName}'
               - 
                 Effect: "Allow"
                 Action:
                   - "iam:DetachRolePolicy"
-                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/serverlessrepo*'
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/serverlessrepo*'             
   
   CreateSecretRotationLambdaFn:
     Condition: IsNotUseDBSnapshot
@@ -557,7 +561,7 @@ Resources:
       Handler: index.lambda_handler
       MemorySize: 128
       Role: !GetAtt CreateSecretRotationLambdaRole.Arn
-      Runtime: python3.6
+      Runtime: python3.9
       Timeout: 120
       VpcConfig: 
         SecurityGroupIds: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SecretRotationLambdaSecurityGroup'}]
@@ -901,7 +905,7 @@ Resources:
       Handler: dbbootstrap.handler
       MemorySize: 128
       Role: !GetAtt DBBootStrapLambdaRole.Arn
-      Runtime: python3.6
+      Runtime: python3.9
       Timeout: 60
       VpcConfig: 
         SecurityGroupIds: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SecretRotationLambdaSecurityGroup'}]
